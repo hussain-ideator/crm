@@ -1,0 +1,25 @@
+# Core
+Django>=5.1,<6.0
+djangorestframework>=3.15,<4.0
+adrf>=0.1.8
+
+# DB
+mysqlclient>=2.2
+
+# Auth
+djangorestframework-simplejwt>=5.3
+
+# API tooling
+drf-spectacular>=0.27
+django-filter>=24.0
+django-cors-headers>=4.4
+
+# Config
+django-environ>=0.11
+
+# Dev / test
+pytest>=8.0
+pytest-django>=4.8
+factory-boy>=3.3
+ruff>=0.6
+django-debug-toolbar>=4.4

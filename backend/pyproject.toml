@@ -1,0 +1,25 @@
+[project]
+name = "crm-backend"
+version = "0.1.0"
+description = "CRM backend (Django + adrf)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+  ".venv",
+  "**/migrations/**",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"**/settings.py" = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "crm.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "-v --tb=short --reuse-db"

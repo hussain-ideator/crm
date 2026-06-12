@@ -1,0 +1,59 @@
+# --- Python / Django ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.sqlite3
+db.sqlite3
+
+# Django
+backend/staticfiles/
+backend/media/
+backend/*.log
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+build/
+dist/
+.npm/
+.pnpm-store/
+.yarn/
+
+# --- Env files ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Editors ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Agent / Spec tool caches ---
+.specify/state/
+.specify/cache/
