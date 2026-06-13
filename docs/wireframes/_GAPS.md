@@ -21,18 +21,27 @@ inconsistent with our model.
 
 ## A. Data-model field gaps (entities exist, fields don't)
 
-| Gap | Affected modules | Type | Phase | Notes |
-|-----|------------------|------|-------|-------|
-| `Lead` shows fields absent from ERD: Mobile, Title, Fax, Website, Industry, No. of Employees, Salutation | Leads | ERD | P0 | These are on the **create form** and detail; decide per field whether to add to `Lead`, move to a related entity, or drop. Website/Industry/Employees already exist on `Company` — confirm they shouldn't live on Lead. |
-| `Contact` shows fields absent from ERD: Mobile, Department | Contacts | ERD | P0 | ERD `Contact` has `phone` + `title` only. Mobile + Department appear on detail view. Same add/drop decision. |
-| Salutation (e.g. "Ms.") shown but no field | Leads, Contacts | ERD | P0/P1 | Display-only vs. stored field. Low effort if wanted. |
+> **Status:** ✅ **Resolved by [ADR-005](../../.agent-os/product/decisions.md)** (Lead
+> model field set), 2026-06-14. Gaps retained below for traceability — see the
+> **Resolved** column for the per-row disposition.
+
+| Gap | Affected modules | Type | Phase | Resolved | Notes |
+|-----|------------------|------|-------|----------|-------|
+| `Lead` shows fields absent from ERD: Mobile, Title, Fax, Website, Industry, No. of Employees, Salutation | Leads | ERD | P0 | ✅ **ADR-005** | These are on the **create form** and detail; decide per field whether to add to `Lead`, move to a related entity, or drop. Website/Industry/Employees already exist on `Company` — confirm they shouldn't live on Lead. → ADR-005: Mobile, Title, Website, Industry, No. of Employees, Salutation kept on `Lead` (raw pre-account text); **Fax dropped** (reversible nullable column). |
+| `Contact` shows fields absent from ERD: Mobile, Department | Contacts | ERD | P0 | ⚠️ **Partial — ADR-005** | ERD `Contact` has `phone` + `title` only. Mobile + Department appear on detail view. Same add/drop decision. → ADR-005 is Lead-scoped; it sets the shared `salutation` enum across Lead **and** Contact, but Contact's **Mobile/Department still need a dedicated decision**. |
+| Salutation (e.g. "Ms.") shown but no field | Leads, Contacts | ERD | P0/P1 | ✅ **ADR-005** | Display-only vs. stored field. Low effort if wanted. → ADR-005: stored **enum** `Mr./Ms./Mrs./Dr./Mx./None`, shared across Lead and Contact for uniform name composites. |
 
 ## B. Enum / value mismatches
 
-| Gap | Affected modules | Type | Phase | Notes |
-|-----|------------------|------|-------|-------|
-| Lead status values differ from ERD enum | Leads | ERD + Wireframe | **P0** | ERD enum = `new/contacted/qualified/lost/converted`. UI process strip shows **Attempted to Contact, Contact in Future, Contacted, Junk Lead, Lost Lead**. Must reconcile before building Lead status — affects filters, Kanban-like flows, conversion. |
-| Deal stage list needs canonical seed | Deals | ERD | P0 | Stages seen: Qualification, Id. Decision Makers, Needs Analysis, Proposal/Price Quote, Negotiation/Review, Closed Won, Closed Lost. ERD has `Pipeline`→`Stage`; confirm the default pipeline's stage rows + probabilities + is_won/is_lost. |
+> **Status:** ✅ **Resolved** — Lead status by
+> [ADR-006](../../.agent-os/product/decisions.md), Deal stage seed by
+> [ADR-007](../../.agent-os/product/decisions.md), both 2026-06-14. Gaps retained
+> below for traceability — see the **Resolved** column.
+
+| Gap | Affected modules | Type | Phase | Resolved | Notes |
+|-----|------------------|------|-------|----------|-------|
+| Lead status values differ from ERD enum | Leads | ERD + Wireframe | **P0** | ✅ **ADR-006** | ERD enum = `new/contacted/qualified/lost/converted`. UI process strip shows **Attempted to Contact, Contact in Future, Contacted, Junk Lead, Lost Lead**. Must reconcile before building Lead status — affects filters, Kanban-like flows, conversion. → ADR-006: final enum `new/contacted/qualified/unqualified/converted` (Zoho's five-way split collapsed; ERD's `lost` → `unqualified`). |
+| Deal stage list needs canonical seed | Deals | ERD | P0 | ✅ **ADR-007** | Stages seen: Qualification, Id. Decision Makers, Needs Analysis, Proposal/Price Quote, Negotiation/Review, Closed Won, Closed Lost. ERD has `Pipeline`→`Stage`; confirm the default pipeline's stage rows + probabilities + is_won/is_lost. → ADR-007: seed one `Sales Pipeline` with six stages (Qualification, Needs Analysis, Proposal, Negotiation, Closed Won, Closed Lost) + probabilities + `is_won`/`is_lost`; "Identify Decision Makers" dropped. |
 
 ## C. Display-naming conventions (low risk)
 
