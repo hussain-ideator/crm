@@ -61,8 +61,10 @@ erDiagram
 - owner_fk → User, is_deleted, created_at, updated_at, created_by_fk
 
 ### Lead
-- id, first_name, last_name, email, phone, company_name (raw text)
-- source_fk → LeadSource, status (new/contacted/qualified/lost/converted)
+- id, salutation (enum: Mr./Ms./Mrs./Dr./Mx./None), first_name, last_name, title
+- email, phone, mobile
+- company_name (raw text), website, industry, no_of_employees
+- source_fk → LeadSource, status (new/contacted/qualified/unqualified/converted)
 - owner_fk → User, converted_at, converted_deal_fk → Deal
 - is_deleted, created_at, updated_at, created_by_fk
 
@@ -75,6 +77,9 @@ erDiagram
 ### Pipeline + Stage
 - Pipeline: id, name, is_default
 - Stage: id, pipeline_fk, name, order_index, probability, is_won, is_lost
+
+> Default seed pipeline ("Sales Pipeline") and stages are defined in ADR-007;
+> seeded via Django data migration.
 
 ### Activity
 - id, type (task/call/meeting), subject, description
