@@ -6,6 +6,31 @@ Format: `ADR-NNN — Title — Date — Status (Proposed | Accepted | Superseded
 
 ---
 
+## ADR-008 — `tests/` directory per app over `tests.py` — 2026-06-14 — Accepted
+
+**Context.** Django's `startapp` scaffolds a single `tests.py` per app, which the
+freshly scaffolded `core` and `accounts` apps inherited. The doc reconciliation
+just completed (ADR-005/006/007 against `docs/erd.md` and
+`docs/wireframes/_GAPS.md`) settled a body of Lead/Deal decisions whose
+behaviour — status enum collapse, field denormalization, seed pipeline flags —
+will each need focused test coverage. A single-file layout per app makes that
+coverage unwieldy: tests for models, serializers, views, and seed data all pile
+into one module, growing past the point where it reads cleanly or merges without
+conflict.
+
+**Decision.** Replace each app's `tests.py` with a `tests/` package (containing
+`__init__.py`) holding one module per concern, e.g. `test_models.py`,
+`test_serializers.py`, `test_views.py`, `test_seed.py`. The directory convention
+applies to every app — `core`, `accounts`, and all apps added later.
+
+**Consequences.** Test files stay small and topical; coverage for a given
+decision (e.g. [[ADR-006]] status enum, [[ADR-007]] seed stages) lands in an
+obvious module. Django/pytest discover the package automatically, so no config
+change is needed beyond deleting the stub `tests.py`. Cost: a few more files and
+the discipline of placing tests in the right module; negligible at project size.
+
+---
+
 ## ADR-007 — Deal stage seed data — 2026-06-14 — Accepted
 
 **Context.** `docs/erd.md` defines `Pipeline` → `Stage` but leaves the default
