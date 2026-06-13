@@ -6,6 +6,107 @@ Format: `ADR-NNN — Title — Date — Status (Proposed | Accepted | Superseded
 
 ---
 
+## ADR-007 — Deal stage seed data — 2026-06-14 — Accepted
+
+**Context.** `docs/erd.md` defines `Pipeline` → `Stage` but leaves the default
+pipeline's stage rows, probabilities, and `is_won`/`is_lost` flags unspecified
+(see `docs/wireframes/_GAPS.md` §B). Zoho's default stage list — Qualification,
+Identify Decision Makers, Needs Analysis, Proposal/Price Quote,
+Negotiation/Review, Closed Won, Closed Lost — was the reference.
+
+**Decision.** Seed one default pipeline `Sales Pipeline` (`is_default=true`) with
+six stages:
+
+| order | Stage | probability | is_won | is_lost |
+|-------|-------|-------------|--------|---------|
+| 1 | Qualification | 10 | false | false |
+| 2 | Needs Analysis | 25 | false | false |
+| 3 | Proposal | 50 | false | false |
+| 4 | Negotiation | 75 | false | false |
+| 5 | Closed Won | 100 | true | false |
+| 6 | Closed Lost | 0 | false | true |
+
+Zoho's "Identify Decision Makers" stage is dropped: in practice it overlaps with
+Needs Analysis (both are discovery work before a proposal exists), and a rep
+moving a deal forward does not need to distinguish "understanding the need" from
+"finding who signs" as separate pipeline columns. Stage names are simplified
+(Proposal, Negotiation) rather than carrying Zoho's slash variants.
+
+**Consequences.** A single, opinionated default pipeline ships in MVP seed data.
+Probabilities feed forecasting later. Additional stages or extra pipelines can be
+added without migration (data rows, not schema). Closed Won/Lost are ordinary
+stages flagged with `is_won`/`is_lost`, so the Kanban "move to won/lost" flow
+(§J, Phase 2) keys off those flags rather than hard-coded names.
+
+---
+
+## ADR-006 — Lead status enum — 2026-06-14 — Accepted
+
+**Context.** The ERD `Lead.status` enum (`new/contacted/qualified/lost/converted`)
+did not match the Zoho process strip seen in wireframes — Attempted to Contact,
+Contact in Future, Contacted, Junk Lead, Lost Lead (see
+`docs/wireframes/_GAPS.md` §B). The mismatch had to be reconciled before building
+Lead status, since it drives filters, conversion, and any future Kanban flow.
+
+**Decision.** Final enum: `new`, `contacted`, `qualified`, `unqualified`,
+`converted`. Zoho's five-way split is collapsed: "Attempted to Contact" and
+"Contact in Future" both fold into `contacted` (an attempt was made), while
+"Junk Lead" and "Lost Lead" both fold into `unqualified` (not a fit). This
+replaces the ERD's `lost` value with `unqualified`, which reads more naturally
+for the not-a-fit terminal state.
+
+In the MVP a rep only needs to know, for any lead: not yet reached (`new`),
+reached (`contacted`), good fit (`qualified`), not a fit (`unqualified`), or won
+(`converted`). Finer-grained states (e.g. distinguishing a future-callback from a
+failed attempt) can be added later as enum values without breaking existing data.
+
+**Consequences.** Simpler filters and status picker; less rep decision fatigue.
+The `unqualified`/`converted` states are terminal. Adding states later is
+additive (new enum members); any reporting that buckets by status should map on
+the five canonical values rather than assume the set is frozen.
+
+---
+
+## ADR-005 — Lead model field set — 2026-06-14 — Accepted
+
+**Context.** Wireframes showed Lead create/detail fields absent from the ERD —
+Mobile, Title, Fax, Website, Industry, No. of Employees, Salutation (see
+`docs/wireframes/_GAPS.md` §A). Each needed an add / move-to-related-entity /
+drop decision. Website, Industry, and No. of Employees already exist on the
+`Company` entity, raising the question of whether they should live on `Lead` at
+all.
+
+**Decision.** Final `Lead` field set:
+
+- Identity: `salutation`, `first_name`, `last_name`, `title`
+- Contact: `email`, `phone`, `mobile`
+- Company (raw text, pre-account): `company_name`, `website`, `industry`,
+  `no_of_employees`
+- CRM: `source_fk` → LeadSource, `status` (see [[ADR-006]] — Lead status enum),
+  `owner_fk` → User, `converted_at`, `converted_deal_fk` → Deal
+- Audit (via `TimestampedModel`): `is_deleted`, `created_at`, `updated_at`,
+  `created_by_fk`
+
+`website`, `industry`, and `no_of_employees` are kept on `Lead` — not delegated
+to `Company` — because a Lead exists *before* any `Company`/Account record is
+created. These are raw, unverified prospect details captured at intake;
+duplicating them onto the `Company` happens at conversion. Mirroring
+`company_name`, they are denormalized text on the Lead by design.
+
+`fax` is dropped: it is effectively dead in B2B sales workflows and carries no
+MVP value. It can be re-added as a nullable field later if a customer asks.
+
+`salutation` is a stored enum: `Mr.`, `Ms.`, `Mrs.`, `Dr.`, `Mx.`, `None`
+(rather than free text), keeping it normalized for display composites and
+consistent across Lead and Contact.
+
+**Consequences.** Leads capture full prospect context without a premature Company
+record. Some fields are duplicated onto Company at conversion — an accepted
+denormalization. The `salutation` enum is shared with Contact (§A) for a uniform
+name display. Dropping `fax` is reversible (additive nullable column).
+
+---
+
 ## ADR-004 — Monorepo for backend + frontend — 2026-06-12 — Accepted
 
 **Context.** Solo developer building backend (Django) and frontend (Next.js).
