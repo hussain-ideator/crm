@@ -10,6 +10,8 @@
  * hooks go through TanStack Query, which calls into this module.
  */
 
+import { getValidAccessToken, clearAccessToken } from '@/lib/auth'
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api'
 
 /** Returns a bearer token (or null) for the current request, sync or async. */
@@ -67,4 +69,43 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
   }
 
   return data as T
+}
+
+/**
+ * Authenticated fetch — ensures a valid access token is in memory (refreshing
+ * silently if expired), injects the Bearer header, and retries once on 401
+ * (handles the race where a token expires between the check and the request).
+ */
+export async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const doRequest = async (token: string | null) => {
+    const headers = new Headers(init.headers)
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    return fetch(`${API_BASE_URL}${path}`, { ...init, headers, credentials: 'include' })
+  }
+
+  let token: string | null
+  try {
+    token = await getValidAccessToken()
+  } catch {
+    // Refresh failed — proceed without token; caller will handle 401.
+    token = null
+  }
+
+  const response = await doRequest(token)
+
+  if (response.status === 401 && token !== null) {
+    // Token may have expired between the check and the server response; retry once.
+    try {
+      const { refreshAccessToken } = await import('@/lib/auth')
+      const fresh = await refreshAccessToken()
+      return doRequest(fresh)
+    } catch {
+      clearAccessToken()
+      return response
+    }
+  }
+
+  return response
 }

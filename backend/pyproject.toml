@@ -14,7 +14,9 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
-ignore = []
+ignore = [
+  "RUF012",  # Django Meta lists and permission_classes are intentional class-level mutables
+]
 
 [tool.ruff.lint.per-file-ignores]
 "**/settings.py" = ["E501"]
