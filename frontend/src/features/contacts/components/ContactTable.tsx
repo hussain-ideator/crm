@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -9,11 +10,11 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 
-import type { Company, CompanyListResponse } from '../types'
+import type { Contact, ContactListResponse } from '../types'
 
-const col = createColumnHelper<Company>()
+const col = createColumnHelper<Contact>()
 
-const SORT_FIELDS = ['name', 'industry', 'annual_revenue', 'employee_count', 'created_at', 'updated_at'] as const
+const SORT_FIELDS = ['first_name', 'last_name', 'email', 'phone', 'title', 'created_at'] as const
 type SortField = (typeof SORT_FIELDS)[number]
 
 function isSortable(field: string): field is SortField {
@@ -21,13 +22,31 @@ function isSortable(field: string): field is SortField {
 }
 
 const columns = [
-  col.accessor('name', { header: 'Name' }),
-  col.accessor('industry', { header: 'Industry' }),
-  col.accessor('website', { header: 'Website' }),
+  col.accessor('first_name', { header: 'First Name' }),
+  col.accessor('last_name', { header: 'Last Name' }),
+  col.accessor('email', { header: 'Email' }),
   col.accessor('phone', { header: 'Phone' }),
-  col.accessor('employee_count', { header: 'Employees' }),
-  col.accessor('annual_revenue', { header: 'Revenue' }),
-  col.accessor('owner', { header: 'Owner' }),
+  col.accessor('title', { header: 'Title' }),
+  col.accessor('company', {
+    header: 'Company',
+    cell: (info) => {
+      const company = info.getValue()
+      if (!company) return <span className="text-zinc-400">—</span>
+      return (
+        <Link
+          href={`/companies/${company.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-blue-600 underline dark:text-blue-400"
+        >
+          {company.name}
+        </Link>
+      )
+    },
+  }),
+  col.accessor('owner', {
+    header: 'Owner',
+    cell: (info) => info.getValue()?.full_name ?? <span className="text-zinc-400">—</span>,
+  }),
   col.accessor('created_at', {
     header: 'Created',
     cell: (info) => new Date(info.getValue()).toLocaleDateString(),
@@ -35,12 +54,12 @@ const columns = [
 ]
 
 interface Props {
-  data: CompanyListResponse
+  data: ContactListResponse
   page: number
   pageSize: number
 }
 
-export function CompanyTable({ data, page, pageSize }: Props) {
+export function ContactTable({ data, page, pageSize }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -59,7 +78,7 @@ export function CompanyTable({ data, page, pageSize }: Props) {
     [router, searchParams],
   )
 
-  const currentOrdering = searchParams.get('ordering') ?? 'name'
+  const currentOrdering = searchParams.get('ordering') ?? 'last_name'
 
   function handleSort(field: string) {
     if (!isSortable(field)) return
@@ -68,7 +87,7 @@ export function CompanyTable({ data, page, pageSize }: Props) {
   }
 
   function handleRowClick(id: number) {
-    router.push(`/companies/${id}`)
+    router.push(`/contacts/${id}`)
   }
 
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -116,7 +135,7 @@ export function CompanyTable({ data, page, pageSize }: Props) {
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-8 text-center text-zinc-400">
-                  No companies found.
+                  No contacts found.
                 </td>
               </tr>
             ) : (
@@ -138,10 +157,9 @@ export function CompanyTable({ data, page, pageSize }: Props) {
         </table>
       </div>
 
-      {/* Pagination controls */}
       <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400">
         <span>
-          {data.count} {data.count === 1 ? 'company' : 'companies'}
+          {data.count} {data.count === 1 ? 'contact' : 'contacts'}
         </span>
         <div className="flex gap-2">
           <button
