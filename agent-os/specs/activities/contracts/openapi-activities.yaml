@@ -1,0 +1,480 @@
+openapi: "3.1.0"
+
+info:
+  title: Activities API
+  version: "1.0.0"
+  description: >
+    CRUD API for Activities (Tasks, Calls, Meetings).
+    Activities can be linked to any CRM entity (Lead, Contact, Company, Deal)
+    via a generic relation. content_type is always expressed as a human-readable
+    string label — never as a raw ContentType integer ID.
+    All endpoints require JWT Bearer authentication.
+
+servers:
+  - url: /api
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ActivityType:
+      type: string
+      enum: [task, call, meeting]
+      description: Fixed three-value enum. task = todo item; call = phone/video call; meeting = in-person or virtual meeting.
+
+    ContentTypeLabel:
+      type: string
+      enum: [lead, contact, company, deal]
+      description: Human-readable label for the related CRM entity type. Never a raw ContentType integer ID.
+
+    UserMinimal:
+      type: object
+      properties:
+        id:        { type: integer }
+        full_name: { type: string }
+        email:     { type: string, format: email }
+
+    Activity:
+      type: object
+      description: Full activity representation (read).
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/ActivityType'
+        subject:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          default: ""
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            Null means incomplete. Set by the server when POST /complete/ is called.
+            Also writable directly via PATCH for explicit timestamp scenarios.
+        assigned_to_id:
+          type: integer
+          nullable: true
+          writeOnly: true
+          description: PK of the User to assign this activity to. Send null to clear.
+        assigned_to:
+          $ref: '#/components/schemas/UserMinimal'
+          readOnly: true
+          nullable: true
+        content_type:
+          $ref: '#/components/schemas/ContentTypeLabel'
+          nullable: true
+          description: >
+            String label of the related CRM entity type.
+            Must be provided together with object_id, or both must be null.
+        object_id:
+          type: integer
+          nullable: true
+          description: >
+            PK of the related CRM record. Soft reference — not validated against
+            the target record's existence in Phase 1.
+            Must be provided together with content_type, or both must be null.
+        is_deleted:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by:
+          $ref: '#/components/schemas/UserMinimal'
+          readOnly: true
+          nullable: true
+      required:
+        - type
+        - subject
+
+    ActivityWrite:
+      type: object
+      description: Activity create / update payload.
+      properties:
+        type:
+          $ref: '#/components/schemas/ActivityType'
+        subject:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          default: ""
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Explicit timestamp. Use POST /complete/ for server-controlled stamping.
+        assigned_to_id:
+          type: integer
+          nullable: true
+        content_type:
+          $ref: '#/components/schemas/ContentTypeLabel'
+          nullable: true
+        object_id:
+          type: integer
+          nullable: true
+      required:
+        - type
+        - subject
+
+    PaginatedActivityList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Total number of matching activities (across all pages).
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Activity'
+
+    ValidationError:
+      type: object
+      description: Field-level validation errors (DRF default shape).
+      additionalProperties:
+        type: array
+        items:
+          type: string
+
+    NotFound:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Not found."
+
+    Unauthorized:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Authentication credentials were not provided."
+
+paths:
+  /activities/:
+    get:
+      summary: List activities
+      description: >
+        Returns a paginated list of all non-deleted activities.
+        Supports free-text search across subject and description (?q=),
+        filtering by type, assigned user, and related CRM record
+        (?content_type=lead&object_id=5), and ordering.
+        When filtering by a specific record, results are sorted by
+        due_at ASC NULLS LAST, then created_at DESC (feed sort order).
+        On the global list, default ordering is created_at DESC.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Search across subject and description (case-insensitive).
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ActivityType'
+          description: Filter by activity type.
+        - name: assigned_to
+          in: query
+          schema: { type: integer }
+          description: Filter by assigned user PK.
+        - name: content_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentTypeLabel'
+          description: >
+            Filter by related entity type. Must be used together with object_id.
+            Accepted values: lead, contact, company, deal.
+        - name: object_id
+          in: query
+          schema: { type: integer }
+          description: >
+            Filter by related entity PK. Must be used together with content_type.
+        - name: ordering
+          in: query
+          schema: { type: string }
+          description: >
+            Comma-separated field names for ordering. Prefix with - for descending.
+            Allowed: subject, due_at, completed_at, created_at, type, assigned_to.
+            Example: -due_at,created_at
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+          description: Page number (1-based).
+        - name: page_size
+          in: query
+          schema: { type: integer, default: 25, maximum: 100 }
+          description: Results per page.
+      responses:
+        "200":
+          description: Paginated list of activities.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActivityList'
+        "400":
+          description: Invalid query parameters (e.g. content_type without object_id).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+
+    post:
+      summary: Create an activity
+      description: >
+        Creates a new activity. type and subject are required.
+        content_type and object_id must both be provided or both be null.
+        object_id is a soft reference — the target record's existence is not
+        validated in Phase 1.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityWrite'
+      responses:
+        "201":
+          description: Activity created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        "400":
+          description: Validation error (missing subject, invalid type, unpaired content_type/object_id, etc.).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+
+  /activities/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    get:
+      summary: Retrieve an activity
+      description: Returns the full activity detail. Returns 404 for soft-deleted activities.
+      responses:
+        "200":
+          description: Activity detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+        "404":
+          description: Activity not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+
+    put:
+      summary: Full update an activity
+      description: Replaces all user-editable fields. type and subject are required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityWrite'
+      responses:
+        "200":
+          description: Activity updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+        "404":
+          description: Activity not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+
+    patch:
+      summary: Partial update an activity
+      description: >
+        Updates one or more fields. content_type and object_id are covalidated —
+        if either is sent, both must be present (or send both as null to clear the relation).
+        completed_at can be set or cleared here directly (FR-011).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityWrite'
+      responses:
+        "200":
+          description: Activity partially updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+        "404":
+          description: Activity not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+
+    delete:
+      summary: Soft delete an activity
+      description: >
+        Sets is_deleted=True on the activity. The DB row is preserved.
+        The activity will no longer appear in list or detail responses.
+      responses:
+        "204":
+          description: Activity soft-deleted.
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+        "404":
+          description: Activity not found or already soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+
+  /activities/{id}/complete/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      summary: Mark activity as complete
+      description: >
+        Sets completed_at to the current server timestamp (timezone.now()).
+        No request body required. Idempotent — calling on an already-complete
+        activity updates completed_at to the new current time.
+      responses:
+        "200":
+          description: Activity marked complete. Returns updated activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+        "404":
+          description: Activity not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+
+  /activities/{id}/incomplete/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      summary: Mark activity as incomplete
+      description: >
+        Clears completed_at (sets to null), reverting the activity to incomplete.
+        No request body required. Idempotent — calling on an already-incomplete
+        activity has no effect (still returns 200).
+      responses:
+        "200":
+          description: Activity marked incomplete. Returns updated activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+        "404":
+          description: Activity not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'

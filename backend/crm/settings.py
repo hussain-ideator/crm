@@ -72,7 +72,7 @@ LOCAL_APPS = [
     "apps.companies",
     "apps.contacts",
     "apps.leads",
-    # "apps.deals",
+    "apps.deals",
     # "apps.activities",
 ]
 
