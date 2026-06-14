@@ -171,7 +171,7 @@ adrf's compatibility with DRF serializers and filters.
 
 ---
 
-## ADR-001 — Next.js 15 (App Router) over plain React — 2026-06-12 — Accepted
+## ADR-001 — Next.js 15 (App Router) over plain React — 2026-06-12 — Superseded by ADR-008
 
 **Context.** CRM is heavy on dashboards (good SSR fit), needs route-level
 auth middleware, and may eventually have public marketing pages.
