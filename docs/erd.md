@@ -123,3 +123,18 @@ erDiagram
 
 > Convention: every business entity has `is_deleted`, `created_at`,
 > `updated_at`, `created_by` — provided by `apps.core.TimestampedModel`.
+
+## Implementation Status
+
+| Entity | Status | Module |
+|--------|--------|--------|
+| User | ✅ complete | accounts |
+| RefreshTokenFamily | ✅ complete | accounts |
+| RefreshTokenLineage | ✅ complete | accounts |
+| Company | ✅ complete | companies — Phase 1 Module 1 |
+| Contact | ⬜ planned | — |
+| Lead | ⬜ planned | — |
+| Deal | ⬜ planned | — |
+| Pipeline / Stage | ⬜ planned | — |
+| Activity | ⬜ planned | — |
+| Note / Attachment | ⬜ planned | — |

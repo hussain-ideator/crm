@@ -1,0 +1,486 @@
+openapi: "3.1.0"
+info:
+  title: CRM Companies API
+  version: "1.0.0"
+  description: >
+    REST endpoints for the Companies (Accounts) module — Phase 1.
+    All endpoints require a valid JWT Bearer token (Authorization: Bearer <access>).
+    Unauthenticated requests receive 401.
+
+servers:
+  - url: http://localhost:8000/api
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Company:
+      type: object
+      description: A business organisation tracked in the CRM.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          example: 42
+        name:
+          type: string
+          maxLength: 255
+          example: "Acme Corp"
+        industry:
+          type: string
+          maxLength: 100
+          default: ""
+          example: "Technology"
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          default: ""
+          example: "https://acme.example.com"
+        phone:
+          type: string
+          maxLength: 50
+          default: ""
+          example: "+1-555-0100"
+        billing_address:
+          type: string
+          default: ""
+          example: "123 Main St, Springfield"
+        shipping_address:
+          type: string
+          default: ""
+          example: "123 Main St, Springfield"
+        annual_revenue:
+          type: string
+          nullable: true
+          description: Decimal serialised as string; null if not set.
+          example: "1200000.00"
+        employee_count:
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 250
+        owner:
+          type: integer
+          nullable: true
+          description: Primary key of the owning CRM user; null if unassigned.
+          example: 7
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-06-14T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          example: "2026-06-14T10:00:00Z"
+        created_by:
+          type: integer
+          nullable: true
+          readOnly: true
+          description: PK of the user who created the record.
+          example: 3
+      required:
+        - id
+        - name
+        - created_at
+        - updated_at
+
+    CompanyWrite:
+      type: object
+      description: Request body for create and full-update. All fields except name are optional.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Acme Corp"
+        industry:
+          type: string
+          maxLength: 100
+          default: ""
+          example: "Technology"
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          default: ""
+          example: "https://acme.example.com"
+        phone:
+          type: string
+          maxLength: 50
+          default: ""
+          example: "+1-555-0100"
+        billing_address:
+          type: string
+          default: ""
+        shipping_address:
+          type: string
+          default: ""
+        annual_revenue:
+          type: string
+          nullable: true
+          description: Non-negative decimal as string, e.g. "1200000.00". Null or omit to clear.
+          example: "1200000.00"
+        employee_count:
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 250
+        owner:
+          type: integer
+          nullable: true
+          description: PK of a CRM user; null or omit to leave unassigned.
+          example: 7
+      required:
+        - name
+
+    CompanyPatch:
+      type: object
+      description: Request body for partial update (PATCH). All fields are optional.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        industry:
+          type: string
+          maxLength: 100
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+        phone:
+          type: string
+          maxLength: 50
+        billing_address:
+          type: string
+        shipping_address:
+          type: string
+        annual_revenue:
+          type: string
+          nullable: true
+        employee_count:
+          type: integer
+          minimum: 0
+          nullable: true
+        owner:
+          type: integer
+          nullable: true
+
+    CompanyList:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Total number of matching companies (before pagination).
+          example: 150
+        next:
+          type: string
+          format: uri
+          nullable: true
+          description: URL for the next page, or null if on the last page.
+          example: "http://localhost:8000/api/companies/?page=3"
+        previous:
+          type: string
+          format: uri
+          nullable: true
+          description: URL for the previous page, or null if on the first page.
+          example: "http://localhost:8000/api/companies/?page=1"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/Company"
+      required:
+        - count
+        - next
+        - previous
+        - results
+
+    ValidationError:
+      type: object
+      description: Field-level validation errors returned for 400 responses.
+      additionalProperties:
+        type: array
+        items:
+          type: string
+      example:
+        name: ["This field may not be blank."]
+        annual_revenue: ["annual_revenue must be a non-negative number."]
+
+    DetailError:
+      type: object
+      properties:
+        detail:
+          type: string
+      example:
+        detail: "No Company matches the given query."
+
+paths:
+  /companies/:
+    get:
+      operationId: companies_list
+      summary: List companies
+      description: >
+        Returns a paginated list of non-deleted companies.
+        Supports free-text search (`q`), filters (`industry`, `owner`),
+        and ordering (`ordering`). All active params appear in the URL.
+      tags: [companies]
+      parameters:
+        - name: q
+          in: query
+          description: Free-text search against name, website, and phone.
+          required: false
+          schema:
+            type: string
+          example: "acme"
+        - name: industry
+          in: query
+          description: Exact industry filter (case-insensitive).
+          required: false
+          schema:
+            type: string
+          example: "Technology"
+        - name: owner
+          in: query
+          description: Filter by owner user PK.
+          required: false
+          schema:
+            type: integer
+          example: 7
+        - name: ordering
+          in: query
+          description: >
+            Sort field. Prefix with `-` for descending. Allowed values:
+            `name`, `-name`, `industry`, `-industry`, `annual_revenue`,
+            `-annual_revenue`, `employee_count`, `-employee_count`,
+            `created_at`, `-created_at`, `updated_at`, `-updated_at`.
+            Default: `name`.
+          required: false
+          schema:
+            type: string
+          example: "-created_at"
+        - name: page
+          in: query
+          description: 1-based page number. Default: 1.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 2
+        - name: page_size
+          in: query
+          description: Records per page. Default: 25. Maximum: 100.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          example: 25
+      responses:
+        "200":
+          description: Paginated list of companies.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyList"
+        "400":
+          description: Invalid query parameters (e.g. non-integer page).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: Authentication credentials not provided or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+
+    post:
+      operationId: companies_create
+      summary: Create a company
+      description: >
+        Creates a new company record. `name` is the only required field.
+        `created_by` is set automatically from the authenticated user;
+        it cannot be supplied by the client.
+      tags: [companies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyWrite"
+            example:
+              name: "Acme Corp"
+              industry: "Technology"
+              website: "https://acme.example.com"
+              annual_revenue: "5000000.00"
+              employee_count: 120
+              owner: 7
+      responses:
+        "201":
+          description: Company created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "400":
+          description: Validation errors.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+
+  /companies/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Primary key of the company.
+        schema:
+          type: integer
+        example: 42
+
+    get:
+      operationId: companies_retrieve
+      summary: Retrieve a company
+      description: >
+        Returns all fields for a single non-deleted company.
+        Soft-deleted companies return 404 (identical to a record that never existed).
+      tags: [companies]
+      responses:
+        "200":
+          description: Company detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+        "404":
+          description: Company not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+
+    put:
+      operationId: companies_update
+      summary: Full update a company
+      description: Replaces all user-editable fields. `created_by`, `created_at`, and read-only fields are ignored.
+      tags: [companies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyWrite"
+      responses:
+        "200":
+          description: Company updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "400":
+          description: Validation errors.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+        "404":
+          description: Company not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+
+    patch:
+      operationId: companies_partial_update
+      summary: Partial update a company
+      description: >
+        Updates one or more fields on an existing company.
+        Fields not included in the request body are left unchanged.
+      tags: [companies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyPatch"
+      responses:
+        "200":
+          description: Company partially updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "400":
+          description: Validation errors.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+        "404":
+          description: Company not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+
+    delete:
+      operationId: companies_destroy
+      summary: Soft-delete a company
+      description: >
+        Marks the company as deleted (`is_deleted=true`). The database row is
+        not removed. Subsequent GET/PUT/PATCH/DELETE on this ID returns 404.
+      tags: [companies]
+      responses:
+        "204":
+          description: Company soft-deleted; no content returned.
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
+        "404":
+          description: Company not found or already soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailError"
