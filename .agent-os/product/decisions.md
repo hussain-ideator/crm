@@ -6,6 +6,37 @@ Format: `ADR-NNN — Title — Date — Status (Proposed | Accepted | Superseded
 
 ---
 
+## ADR-009 — Adopt Next.js 16 over Next.js 15 — 2026-06-14 — Accepted (supersedes ADR-001)
+
+**Context.** `create-next-app@latest` installed Next.js 16.2.9 + React 19.2.4
+during the frontend scaffold on 2026-06-14. ADR-001 (dated 2026-06-12) pinned
+Next.js 15. Next 16 shipped 2025-10-21 — the pin was already eight months stale
+when ADR-001 was written, carried over from a template without re-checking. The
+"docs win, stop and ask" rule fired correctly during the scaffold; this ADR is
+the resolution.
+
+The substance of ADR-001 — "App Router and React Server Components where they
+fit (list views with server-side filters), client components for interactive
+forms" — is preserved verbatim in Next 16. Only the version label changes.
+Re-scaffolding on Next 15 to honour the literal text would mean paying the same
+migration cost in a few months when Next 15's LTS expires, on top of having
+written N15-shaped code in the interim. Going on 16 from day 1 — before any
+code is written against 15 conventions — has the lowest cost.
+
+**Decision.** Adopt Next.js 16. ADR-001 is superseded. New code follows Next 16
+conventions from day 1:
+- `params` and `searchParams` are Promises; `await` them in pages, layouts,
+  and route handlers.
+- `middleware.ts` is now `proxy.ts` (Node runtime only, no edge runtime).
+- Turbopack is the default bundler; no `--turbopack` flag needed.
+- `next lint` is deprecated; lint scripts call `eslint` directly.
+
+**Consequences.** `tech-stack.md` updated in the same commit batch as the
+frontend scaffold. ADR-001's status line points to this ADR (was incorrectly
+pointing to ADR-008 in commit d6651f4 — fixed here). No migration debt: the
+scaffold is fresh, so Next 16 conventions are the only conventions in the
+codebase. Auth work (next session) will use `proxy.ts`, not `middleware.ts`.
+
 ## ADR-008 — `tests/` directory per app over `tests.py` — 2026-06-14 — Accepted
 
 **Context.** Django's `startapp` scaffolds a single `tests.py` per app, which the
@@ -171,7 +202,7 @@ adrf's compatibility with DRF serializers and filters.
 
 ---
 
-## ADR-001 — Next.js 15 (App Router) over plain React — 2026-06-12 — Superseded by ADR-008
+## ADR-001 — Next.js 15 (App Router) over plain React — 2026-06-12 — Superseded by ADR-009
 
 **Context.** CRM is heavy on dashboards (good SSR fit), needs route-level
 auth middleware, and may eventually have public marketing pages.
