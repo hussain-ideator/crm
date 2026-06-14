@@ -70,7 +70,13 @@ class Lead(TimestampedModel, SoftDeleteMixin):
         related_name="updated_leads",
     )
     converted_at = models.DateTimeField(null=True, blank=True)
-    # converted_deal_fk is defined in migration 0003 once the deals app is installed.
+    converted_deal_fk = models.ForeignKey(
+        "deals.Deal",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="converted_from_leads",
+    )
 
     class Meta:
         ordering = ["-created_at"]

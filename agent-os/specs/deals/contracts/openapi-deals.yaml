@@ -1,0 +1,366 @@
+openapi: "3.1.0"
+
+info:
+  title: Deals API
+  version: "1.0.0"
+  description: >
+    CRUD API for Deals (Opportunities), Pipelines, and Stages.
+    All endpoints require JWT Bearer authentication.
+
+servers:
+  - url: /api
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PipelineMinimal:
+      type: object
+      properties:
+        id:         { type: integer }
+        name:       { type: string }
+        is_default: { type: boolean }
+
+    StageMinimal:
+      type: object
+      properties:
+        id:          { type: integer }
+        name:        { type: string }
+        order_index: { type: integer }
+        probability: { type: integer, minimum: 0, maximum: 100 }
+        is_won:      { type: boolean }
+        is_lost:     { type: boolean }
+
+    UserMinimal:
+      type: object
+      properties:
+        id:        { type: integer }
+        full_name: { type: string }
+        email:     { type: string, format: email }
+
+    CompanyMinimal:
+      type: object
+      properties:
+        id:   { type: integer }
+        name: { type: string }
+
+    ContactMinimal:
+      type: object
+      properties:
+        id:         { type: integer }
+        first_name: { type: string }
+        last_name:  { type: string }
+        email:      { type: string, format: email }
+
+    Deal:
+      type: object
+      properties:
+        id:                   { type: integer, readOnly: true }
+        name:                 { type: string, maxLength: 500 }
+        amount:               { type: number, format: decimal, nullable: true, minimum: 0 }
+        currency:             { type: string, maxLength: 3, default: "USD" }
+        close_date:           { type: string, format: date, nullable: true }
+        pipeline_id:          { type: integer, nullable: true, writeOnly: true }
+        pipeline:             { $ref: '#/components/schemas/PipelineMinimal', readOnly: true }
+        stage_id:             { type: integer, nullable: true, writeOnly: true }
+        stage:                { $ref: '#/components/schemas/StageMinimal', readOnly: true }
+        company_id:           { type: integer, nullable: true, writeOnly: true }
+        company:              { $ref: '#/components/schemas/CompanyMinimal', readOnly: true, nullable: true }
+        primary_contact_id:   { type: integer, nullable: true, writeOnly: true }
+        primary_contact:      { $ref: '#/components/schemas/ContactMinimal', readOnly: true, nullable: true }
+        owner_id:             { type: integer, nullable: true, writeOnly: true }
+        owner:                { $ref: '#/components/schemas/UserMinimal', readOnly: true, nullable: true }
+        probability:          { type: integer, nullable: true, minimum: 0, maximum: 100 }
+        is_won:               { type: boolean, readOnly: true }
+        is_lost:              { type: boolean, readOnly: true }
+        is_deleted:           { type: boolean, readOnly: true }
+        created_at:           { type: string, format: date-time, readOnly: true }
+        updated_at:           { type: string, format: date-time, readOnly: true }
+      required:
+        - name
+
+    DealWrite:
+      type: object
+      properties:
+        name:               { type: string, maxLength: 500 }
+        amount:             { type: number, format: decimal, nullable: true, minimum: 0 }
+        currency:           { type: string, maxLength: 3, default: "USD" }
+        close_date:         { type: string, format: date, nullable: true }
+        pipeline_id:        { type: integer, nullable: true }
+        stage_id:           { type: integer, nullable: true }
+        company_id:         { type: integer, nullable: true }
+        primary_contact_id: { type: integer, nullable: true }
+        owner_id:           { type: integer, nullable: true }
+        probability:        { type: integer, nullable: true, minimum: 0, maximum: 100 }
+      required:
+        - name
+
+    PaginatedDeals:
+      type: object
+      properties:
+        count:    { type: integer }
+        next:     { type: string, format: uri, nullable: true }
+        previous: { type: string, format: uri, nullable: true }
+        results:  { type: array, items: { $ref: '#/components/schemas/Deal' } }
+
+    Pipeline:
+      type: object
+      properties:
+        id:         { type: integer, readOnly: true }
+        name:       { type: string, maxLength: 200 }
+        is_default: { type: boolean }
+        stages:
+          type: array
+          readOnly: true
+          items: { $ref: '#/components/schemas/StageMinimal' }
+
+    ValidationError:
+      type: object
+      additionalProperties:
+        type: array
+        items: { type: string }
+
+    DetailError:
+      type: object
+      properties:
+        detail: { type: string }
+
+paths:
+
+  # ────────────── Deals ──────────────
+
+  /deals/:
+    get:
+      summary: List deals
+      operationId: deals_list
+      tags: [Deals]
+      parameters:
+        - name: q
+          in: query
+          description: "Free-text search across deal name and company name"
+          schema: { type: string }
+        - name: stage
+          in: query
+          description: Filter by stage ID
+          schema: { type: integer }
+        - name: pipeline
+          in: query
+          description: Filter by pipeline ID
+          schema: { type: integer }
+        - name: owner
+          in: query
+          description: Filter by owner user ID
+          schema: { type: integer }
+        - name: company
+          in: query
+          description: Filter by company ID
+          schema: { type: integer }
+        - name: ordering
+          in: query
+          description: "Field to order by. Prefix with - for descending. Allowed: name, amount, close_date, probability, created_at, owner_fk"
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, default: 25, maximum: 100 }
+      responses:
+        "200":
+          description: Paginated list of deals
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedDeals' }
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetailError' }
+
+    post:
+      summary: Create a deal
+      operationId: deals_create
+      tags: [Deals]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealWrite' }
+            examples:
+              minimal:
+                summary: Name only (minimum required)
+                value: { name: "Acme Corp Renewal" }
+              with_stage:
+                summary: With stage (probability auto-set)
+                value:
+                  name: "Acme Corp Renewal"
+                  stage_id: 1
+                  pipeline_id: 1
+                  amount: 15000.00
+                  currency: "USD"
+                  close_date: "2026-09-30"
+              probability_override:
+                summary: Stage selected, probability overridden
+                value:
+                  name: "Custom Probability Deal"
+                  stage_id: 1
+                  pipeline_id: 1
+                  probability: 35
+      responses:
+        "201":
+          description: Deal created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+        "401":
+          description: Authentication required
+
+  /deals/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    get:
+      summary: Retrieve a deal
+      operationId: deals_retrieve
+      tags: [Deals]
+      responses:
+        "200":
+          description: Deal detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found (or soft-deleted)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DetailError' }
+
+    put:
+      summary: Full update of a deal
+      operationId: deals_update
+      tags: [Deals]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealWrite' }
+      responses:
+        "200":
+          description: Updated deal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found (or soft-deleted)
+
+    patch:
+      summary: Partial update of a deal
+      operationId: deals_partial_update
+      tags: [Deals]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealWrite' }
+            examples:
+              change_stage:
+                summary: Change stage (probability auto-updates)
+                value: { stage_id: 3 }
+              change_stage_with_override:
+                summary: Change stage, override probability
+                value: { stage_id: 3, probability: 45 }
+              change_amount:
+                summary: Update amount only
+                value: { amount: 20000.00 }
+      responses:
+        "200":
+          description: Updated deal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        "400":
+          description: Validation error
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found
+
+    delete:
+      summary: Soft-delete a deal
+      operationId: deals_destroy
+      tags: [Deals]
+      responses:
+        "204":
+          description: Deal soft-deleted (is_deleted=true, row preserved)
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found (or already soft-deleted)
+
+  # ────────────── Pipelines ──────────────
+
+  /pipelines/:
+    get:
+      summary: List pipelines (with nested stages)
+      operationId: pipelines_list
+      tags: [Pipelines]
+      responses:
+        "200":
+          description: List of pipelines
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Pipeline' }
+        "401":
+          description: Authentication required
+
+  /pipelines/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      summary: Retrieve a pipeline with its stages
+      operationId: pipelines_retrieve
+      tags: [Pipelines]
+      responses:
+        "200":
+          description: Pipeline with stages
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pipeline' }
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found

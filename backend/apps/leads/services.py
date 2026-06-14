@@ -48,7 +48,7 @@ def convert_lead_to_deal(lead, requesting_user):
         lead.converted_at = timezone.now()
         update_fields = ["status", "converted_at", "updated_at"]
         if deal is not None and hasattr(lead, "converted_deal_fk_id"):
-            lead.converted_deal_fk = deal
+            lead.converted_deal_fk_id = deal.id
             update_fields.append("converted_deal_fk_id")
         lead.save(update_fields=update_fields)
 

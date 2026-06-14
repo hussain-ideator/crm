@@ -431,7 +431,6 @@ class TestLeadConvert:
         lead.refresh_from_db()
         assert lead.status == LeadStatus.CONVERTED
 
-    @pytest.mark.xfail(reason="deals app not yet installed — unblock when 0003 migration lands")
     def test_convert_deal_link_in_response(self, auth_client):
         client, _ = auth_client
         lead = LeadFactory(status=LeadStatus.NEW)
