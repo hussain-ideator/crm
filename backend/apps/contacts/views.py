@@ -14,12 +14,22 @@ from .serializers import ContactSerializer
     list=extend_schema(
         summary="List contacts",
         parameters=[
-            OpenApiParameter("q", OpenApiTypes.STR, description="Search across first_name, last_name, email, phone"),
+            OpenApiParameter(
+                "q",
+                OpenApiTypes.STR,
+                description="Search across first_name, last_name, email, phone",
+            ),
             OpenApiParameter("company", OpenApiTypes.INT, description="Filter by company ID"),
             OpenApiParameter("owner", OpenApiTypes.INT, description="Filter by owner user ID"),
-            OpenApiParameter("ordering", OpenApiTypes.STR, description="Sort field; prefix with - for descending (default: last_name)"),
+            OpenApiParameter(
+                "ordering",
+                OpenApiTypes.STR,
+                description="Sort field; prefix with - for descending (default: last_name)",
+            ),
             OpenApiParameter("page", OpenApiTypes.INT, description="1-based page number"),
-            OpenApiParameter("page_size", OpenApiTypes.INT, description="Results per page (max 100)"),
+            OpenApiParameter(
+                "page_size", OpenApiTypes.INT, description="Results per page (max 100)"
+            ),
         ],
     ),
     create=extend_schema(summary="Create a contact"),

@@ -43,7 +43,5 @@ class CompanyWriteSerializer(serializers.ModelSerializer):
 
     def validate_annual_revenue(self, value):
         if value is not None and value < Decimal("0"):
-            raise serializers.ValidationError(
-                "annual_revenue must be a non-negative number."
-            )
+            raise serializers.ValidationError("annual_revenue must be a non-negative number.")
         return value

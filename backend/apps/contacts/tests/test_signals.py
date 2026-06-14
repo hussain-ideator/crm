@@ -1,7 +1,6 @@
 import pytest
 
 from apps.companies.tests.factories import CompanyFactory
-from apps.contacts.models import Contact
 from apps.contacts.tests.factories import ContactFactory
 
 

@@ -136,7 +136,7 @@ class TestCompanyList:
 @pytest.mark.django_db
 class TestCompanyCreate:
     def test_post_creates_company_and_returns_201(self, auth_client):
-        client, user = auth_client
+        client, _ = auth_client
         payload = {"name": "New Corp", "industry": "Tech"}
 
         response = client.post(LIST_URL, payload, format="json")
@@ -225,9 +225,7 @@ class TestCompanyUpdate:
         client, _ = auth_client
         company = CompanyFactory(name="Old Name")
 
-        response = client.patch(
-            detail_url(company.pk), {"name": "New Name"}, format="json"
-        )
+        response = client.patch(detail_url(company.pk), {"name": "New Name"}, format="json")
         assert response.status_code == 200
         company.refresh_from_db()
         assert company.name == "New Name"

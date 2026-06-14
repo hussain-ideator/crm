@@ -17,9 +17,7 @@ class CompanyFactory(DjangoModelFactory):
     phone = factory.Faker("phone_number")
     billing_address = factory.Faker("address")
     shipping_address = factory.Faker("address")
-    annual_revenue = factory.Faker(
-        "pydecimal", left_digits=8, right_digits=2, positive=True
-    )
+    annual_revenue = factory.Faker("pydecimal", left_digits=8, right_digits=2, positive=True)
     employee_count = factory.Faker("random_int", min=1, max=50000)
     owner = factory.SubFactory(UserFactory)
     created_by = factory.SubFactory(UserFactory)

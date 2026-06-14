@@ -163,7 +163,7 @@ class TestContactList:
 @pytest.mark.django_db
 class TestContactCreate:
     def test_post_creates_contact_and_returns_201(self, auth_client):
-        client, user = auth_client
+        client, _ = auth_client
         payload = {"first_name": "Jane", "last_name": "Doe"}
 
         response = client.post(LIST_URL, payload, format="json")
@@ -196,6 +196,7 @@ class TestContactCreate:
 
     def test_post_with_company_links_contact(self, auth_client):
         from apps.companies.tests.factories import CompanyFactory
+
         client, _ = auth_client
         company = CompanyFactory()
         response = client.post(
@@ -302,6 +303,7 @@ class TestContactUpdate:
 
     def test_patch_with_company_id_updates_company_fk(self, auth_client):
         from apps.companies.tests.factories import CompanyFactory
+
         client, _ = auth_client
         contact = ContactFactory()
         new_company = CompanyFactory()
