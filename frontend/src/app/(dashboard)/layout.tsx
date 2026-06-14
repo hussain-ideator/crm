@@ -1,5 +1,6 @@
 import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import LogoutButton from '@/features/auth/components/LogoutButton'
 
 interface DashboardLayoutProps {
@@ -19,7 +20,21 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   return (
     <div className="flex flex-1 flex-col">
       <nav className="flex items-center justify-between border-b p-4">
-        <span className="font-semibold">CRM</span>
+        <div className="flex items-center gap-6">
+          <span className="font-semibold">CRM</span>
+          <Link
+            href="/companies"
+            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          >
+            Companies
+          </Link>
+          <Link
+            href="/contacts"
+            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          >
+            Contacts
+          </Link>
+        </div>
         <LogoutButton />
       </nav>
       <main className="flex-1">{children}</main>

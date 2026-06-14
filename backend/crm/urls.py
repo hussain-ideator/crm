@@ -40,6 +40,7 @@ urlpatterns = [
     # Domain app routes
     path("api/auth/", include("apps.accounts.urls")),
     path("api/companies/", include("apps.companies.urls")),
+    path("api/contacts/", include("apps.contacts.urls")),
     # path("api/", include("apps.leads.urls")),
 ]
 
