@@ -22,4 +22,4 @@ definitions for Claude Code.
 /speckit.implement → execute
 ```
 
-Specs land in `.agent-os/specs/`.
+Specs land in `agent-os/specs/`.

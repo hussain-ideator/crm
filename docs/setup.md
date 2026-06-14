@@ -72,7 +72,7 @@ npm run dev
 ## 5. Agent OS
 
 Follow https://github.com/buildermethods/agent-os for the install command
-(it's a curl-to-shell installer that places files in `.agent-os/`).
+(it's a curl-to-shell installer that places files in `agent-os/`).
 The `product/` and `standards/` folders in this repo are already seeded.
 
 ## 6. SpecKit

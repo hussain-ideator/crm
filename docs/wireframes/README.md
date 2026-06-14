@@ -22,5 +22,5 @@ Each `*.notes.md` should answer:
 - Any RBAC notes (who sees what)?
 - Any empty-state, loading-state, error-state notes?
 
-Reference these from your `.agent-os/specs/<spec>/spec.md` so the agent
+Reference these from your `agent-os/specs/<spec>/spec.md` so the agent
 has visual context when planning.

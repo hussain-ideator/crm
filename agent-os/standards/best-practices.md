@@ -81,7 +81,7 @@ declaring a task complete.
 
 A ticket is **done** when:
 
-1. Code matches the spec/plan/tasks in `.agent-os/specs/<spec>/`.
+1. Code matches the spec/plan/tasks in `agent-os/specs/<spec>/`.
 2. All standards above are met.
 3. Tests added and passing locally.
 4. CI is green on the PR.

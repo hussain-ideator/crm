@@ -28,7 +28,7 @@ new() {
 
 say "Creating directory tree"
 for d in \
-  .agent-os/product .agent-os/standards .agent-os/specs \
+  agent-os/product agent-os/standards agent-os/specs \
   .specify \
   .claude/commands \
   backend/crm \
@@ -43,7 +43,7 @@ do
 done
 
 # Empty marker files
-for d in .agent-os/specs .claude/commands backend/crm \
+for d in agent-os/specs .claude/commands backend/crm \
   backend/apps/accounts backend/apps/leads backend/apps/contacts \
   backend/apps/companies backend/apps/deals backend/apps/activities \
   backend/apps/core

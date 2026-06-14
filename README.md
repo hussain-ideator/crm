@@ -13,7 +13,7 @@ Developed using **Agent OS** standards and **SpecKit** spec-driven workflow.
 
 ```
 .
-├── .agent-os/        Agent OS context (product, standards, specs)
+├── agent-os/        Agent OS context (product, standards, specs)
 ├── .specify/         SpecKit configuration
 ├── .claude/          Claude Code commands and settings
 ├── backend/          Django project + apps
@@ -52,9 +52,9 @@ Every feature follows the SpecKit loop:
 4. `/speckit.tasks` — break into ordered tasks
 5. `/speckit.implement` — execute with Claude Code
 
-Specs land in `.agent-os/specs/YYYY-MM-DD-<JIRA-ID>-<slug>/`.
+Specs land in `agent-os/specs/YYYY-MM-DD-<JIRA-ID>-<slug>/`.
 
 ## Standards
 
-See [`.agent-os/standards/`](.agent-os/standards/) for code style and best practices.
-See [`.agent-os/product/`](.agent-os/product/) for mission, roadmap, and stack decisions.
+See [`agent-os/standards/`](agent-os/standards/) for code style and best practices.
+See [`agent-os/product/`](agent-os/product/) for mission, roadmap, and stack decisions.

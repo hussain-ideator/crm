@@ -41,6 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# create-next-app agent rules — project standards live in /.agent-os/ (see ADR-008)
+# create-next-app agent rules — project standards live in /agent-os/ (see ADR-008)
 /AGENTS.md
 /CLAUDE.md

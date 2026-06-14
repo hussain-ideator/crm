@@ -13,7 +13,7 @@ CRM-
 
 ## Spec
 
-<!-- Link to the spec folder, e.g. .agent-os/specs/2026-06-12-CRM-123-lead-creation/ -->
+<!-- Link to the spec folder, e.g. agent-os/specs/2026-06-12-CRM-123-lead-creation/ -->
 
 ## Changes
 
@@ -30,7 +30,7 @@ CRM-
 ## Definition of Done
 
 - [ ] Code matches the spec/plan/tasks
-- [ ] Standards in `.agent-os/standards/` followed
+- [ ] Standards in `agent-os/standards/` followed
 - [ ] Tests added and passing
 - [ ] CI green
 - [ ] ERD updated if schema changed

@@ -21,7 +21,7 @@ inconsistent with our model.
 
 ## A. Data-model field gaps (entities exist, fields don't)
 
-> **Status:** ✅ **Resolved by [ADR-005](../../.agent-os/product/decisions.md)** (Lead
+> **Status:** ✅ **Resolved by [ADR-005](../../agent-os/product/decisions.md)** (Lead
 > model field set), 2026-06-14. Gaps retained below for traceability — see the
 > **Resolved** column for the per-row disposition.
 
@@ -34,8 +34,8 @@ inconsistent with our model.
 ## B. Enum / value mismatches
 
 > **Status:** ✅ **Resolved** — Lead status by
-> [ADR-006](../../.agent-os/product/decisions.md), Deal stage seed by
-> [ADR-007](../../.agent-os/product/decisions.md), both 2026-06-14. Gaps retained
+> [ADR-006](../../agent-os/product/decisions.md), Deal stage seed by
+> [ADR-007](../../agent-os/product/decisions.md), both 2026-06-14. Gaps retained
 > below for traceability — see the **Resolved** column.
 
 | Gap | Affected modules | Type | Phase | Resolved | Notes |

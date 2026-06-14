@@ -12,7 +12,7 @@ class TimestampedModel(models.Model):
     """Abstract base adding audit timestamps and creator tracking.
 
     Every business entity inherits from this (see
-    ``.agent-os/standards/best-practices.md`` — Data model invariants).
+    ``agent-os/standards/best-practices.md`` — Data model invariants).
 
     Attributes:
         created_at: When the row was first inserted.

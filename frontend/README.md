@@ -2,8 +2,8 @@
 
 Next.js 16 (App Router) + TypeScript, Tailwind CSS v4, shadcn/ui, TanStack
 Query, TanStack Table, react-hook-form + zod. See
-[`.agent-os/product/tech-stack.md`](../.agent-os/product/tech-stack.md) for the
-canonical stack and [`.agent-os/standards/code-style.md`](../.agent-os/standards/code-style.md)
+[`agent-os/product/tech-stack.md`](../agent-os/product/tech-stack.md) for the
+canonical stack and [`agent-os/standards/code-style.md`](../agent-os/standards/code-style.md)
 for conventions.
 
 ## Prerequisites

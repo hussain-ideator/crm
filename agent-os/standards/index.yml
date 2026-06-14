@@ -1,2 +1,7 @@
 # Agent OS Standards Index
 
+root:
+  best-practices:
+    description: Project-wide rules for API design, data model invariants, auth, frontend, testing, performance, observability, and definition of done
+  code-style:
+    description: Python, TypeScript/React, Git, and SQL/migration formatting, linting, naming, and structure conventions
