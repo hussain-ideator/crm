@@ -130,12 +130,19 @@ DATABASES["default"]["OPTIONS"].update(
         "charset": "utf8mb4",
     }
 )
+# Use the same database for tests when the DB user lacks CREATE DATABASE.
+# conftest.py passes keepdb=True so no DROP/CREATE is attempted.
+DATABASES["default"]["TEST"] = {"NAME": DATABASES["default"]["NAME"]}
 
 
 # --------------------------------------------------------------------------- #
 # Custom user model — MUST be set before the first migration.
 # --------------------------------------------------------------------------- #
 AUTH_USER_MODEL = "accounts.User"
+
+AUTHENTICATION_BACKENDS = [
+    "apps.accounts.backends.EmailBackend",
+]
 
 
 # Password validation

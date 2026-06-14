@@ -5,6 +5,25 @@ the schema.
 
 ```mermaid
 erDiagram
+    USER ||--o{ REFRESH_TOKEN_FAMILY  : "has"
+    REFRESH_TOKEN_FAMILY ||--o{ REFRESH_TOKEN_LINEAGE : "tracks"
+
+    REFRESH_TOKEN_FAMILY {
+        uuid   id         PK
+        bigint user_id    FK
+        bool   is_revoked
+        dt     created_at
+    }
+
+    REFRESH_TOKEN_LINEAGE {
+        string jti        PK
+        uuid   family_id  FK
+        bool   is_active
+        dt     issued_at
+        dt     expires_at
+        dt     revoked_at
+    }
+
     USER ||--o{ LEAD          : "owns"
     USER ||--o{ DEAL          : "owns"
     USER ||--o{ CONTACT       : "owns"
@@ -47,6 +66,18 @@ erDiagram
 ### User
 - id (PK), email (unique), password_hash, first_name, last_name, role_fk
 - is_active, last_login, created_at, updated_at
+
+### RefreshTokenFamily (`accounts_refreshtokenfamily`)
+- id UUID PK, user_id FK → User (CASCADE)
+- is_revoked BOOL (db_index), created_at
+- Indexes: (user_id, is_revoked), (created_at)
+
+### RefreshTokenLineage (`accounts_refreshtokenlineage`)
+- jti VARCHAR(36) PK (simplejwt `jti` claim)
+- family_id UUID FK → RefreshTokenFamily (CASCADE)
+- is_active BOOL (db_index, default True)
+- issued_at, expires_at, revoked_at (nullable)
+- Indexes: (family_id, is_active), (expires_at)
 
 ### Role
 - id, name (Admin, Manager, Sales Rep), description

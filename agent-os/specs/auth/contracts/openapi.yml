@@ -1,0 +1,174 @@
+openapi: "3.0.3"
+info:
+  title: CRM Auth API — Contract Excerpt
+  description: >
+    Auth endpoint contracts for the JWT Authentication feature.
+    Authoritative source: drf-spectacular schema at GET /api/schema/.
+    This file covers only the three auth endpoints.
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8000
+    description: Local development (via next.config.ts rewrite from port 3000)
+
+paths:
+
+  /api/auth/login/:
+    post:
+      operationId: auth_login
+      summary: Authenticate user and issue tokens
+      description: >
+        Validates email + password. On success: returns access JWT in body,
+        sets refresh JWT as HttpOnly cookie scoped to /api/auth/refresh/.
+        Error messages are identical for wrong-password and unknown-email (FR-004).
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "user@example.com"
+              password: "s3cur3P@ssword"
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: >
+                HttpOnly refresh token cookie.
+                Dev: SameSite=Lax, no Secure flag.
+                Prod: SameSite=Strict, Secure.
+                Path=/api/auth/refresh/; Max-Age=604800 (7 days).
+              schema:
+                type: string
+                example: "refresh_token=eyJ...; HttpOnly; SameSite=Lax; Path=/api/auth/refresh/; Max-Age=604800"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          description: Invalid credentials (identical message for wrong password and unknown email)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "No active account found with the given credentials"
+
+  /api/auth/refresh/:
+    post:
+      operationId: auth_refresh
+      summary: Rotate refresh token and issue new access token
+      description: >
+        Reads refresh token from HttpOnly cookie (NOT from request body).
+        Validates token against RefreshTokenLineage; detects reuse (stale token).
+        On success: deactivates old lineage record, issues new refresh token and
+        new access token. On reuse: revokes entire token family → 401.
+      tags: [auth]
+      security: []
+      parameters:
+        - in: cookie
+          name: refresh_token
+          required: true
+          description: HttpOnly refresh token set by /api/auth/login/
+          schema:
+            type: string
+      requestBody:
+        required: false
+      responses:
+        '200':
+          description: Token rotated successfully
+          headers:
+            Set-Cookie:
+              description: New refresh token cookie replacing the previous one (same flags)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          description: >
+            Refresh token missing, expired, revoked, or reuse detected.
+            On reuse: entire token family is invalidated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "Token is invalid or expired"
+
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout
+      summary: Revoke refresh token and clear cookie
+      description: >
+        Adds the current refresh token to the revocation list (RefreshTokenLineage
+        is_active=False + simplejwt blacklist) and marks the family as revoked.
+        Clears the refresh cookie via Set-Cookie with Max-Age=0.
+        Both server-side revocation and cookie clearing are required (FR-011).
+      tags: [auth]
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Logout successful; refresh cookie cleared
+          headers:
+            Set-Cookie:
+              description: Clears the refresh_token cookie (Max-Age=0)
+              schema:
+                type: string
+                example: "refresh_token=; HttpOnly; Path=/api/auth/refresh/; Max-Age=0"
+        '401':
+          description: Missing or invalid access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's registered email address
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          description: User's password
+          example: "s3cur3P@ssword"
+
+    AccessTokenResponse:
+      type: object
+      required: [access]
+      properties:
+        access:
+          type: string
+          description: >
+            JWT access token with 15-minute TTL.
+            Store in client memory only — NOT in localStorage, sessionStorage, or any cookie (FR-003).
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3MTk5NTAwMDB9.abc123"
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+          example: "No active account found with the given credentials"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token returned by /api/auth/login/ or /api/auth/refresh/

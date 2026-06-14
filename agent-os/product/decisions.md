@@ -6,6 +6,51 @@ Format: `ADR-NNN — Title — Date — Status (Proposed | Accepted | Superseded
 
 ---
 
+## ADR-011 — SpecKit spec artifacts live under `agent-os/specs/` — 2026-06-14 — Accepted
+
+**Context.** SpecKit (`github/spec-kit`) is the locked workflow framework
+(tech-stack.md). It was bootstrapped at pinned release **v0.10.2** via
+`uv tool install specify-cli --from git+...@v0.10.2`, then
+`specify init --here --integration claude --script ps`. (The brief's
+`--ai claude` flag predates v0.10.x; the current flag is `--integration`, and
+v0.10.x ships its commands as hyphenated Claude Code skills — `/speckit-specify`
+etc. — under `.claude/skills/`, not dot-namespaced `/speckit.*`.)
+
+`init` scaffolds CLI-managed plumbing under `.specify/` (templates, PowerShell
+scripts, workflow, constitution at `.specify/memory/constitution.md`) and a
+4-line stub `CLAUDE.md` at repo root. It does **not** create a top-level
+`specs/` at init time. However, `create-new-feature.ps1` hardcodes the spec
+destination as `$repoRoot/specs` — so the first `/speckit-specify` run would
+create a top-level `specs/` directory. That collides with [[ADR-010]]
+("`agent-os/` is the canonical source of truth") and with the pre-existing,
+intentionally-empty `agent-os/specs/` (held by `.gitkeep`).
+
+**Decision.** Authored spec artifacts (one feature directory each, holding
+`spec.md`, `plan.md`, `tasks.md`, `research.md`, `data-model.md`, `contracts/`,
+etc.) live under **`agent-os/specs/`**, consistent with [[ADR-010]]. SpecKit's
+own `.specify/` infrastructure stays where the CLI puts it — it is tool
+plumbing, not an authored artifact, and is not relocated.
+
+This is enforced by a **one-line patch** to
+`.specify/scripts/powershell/create-new-feature.ps1`: `$specsDir` is set to
+`Join-Path $repoRoot 'agent-os/specs'`. That single change propagates
+everywhere — `common.ps1` and the `setup-plan`/`setup-tasks`/`check-prerequisites`
+scripts all resolve the feature path from `.specify/feature.json` /
+`$env:SPECIFY_FEATURE_DIRECTORY` persisted by `create-new-feature.ps1`, so no
+other script hardcodes `specs/`.
+
+**Consequences.** `create-new-feature.ps1` is now a locally-modified
+CLI-managed file: a future `specify` upgrade that regenerates it will revert
+the patch and silently restore top-level `specs/`. The patched line carries an
+inline comment flagging this, and the re-apply step is documented in
+`.specify/README.md`. A follow-up may replace the patch with a supported
+config mechanism if SpecKit adds one. `.claude/skills/speckit-*` are committed
+as shared infrastructure; per the `init` security notice, `.gitignore` now
+ignores known `.claude/` credential/state paths while keeping `skills/`
+tracked. The root `CLAUDE.md` stub is committed as-is (no project content yet).
+
+---
+
 ## ADR-010 — Agent OS directory layout: `agent-os/` (no dot prefix) — 2026-06-14 — Accepted
 
 **Context.** Two parallel directories existed in the repo: `.agent-os/`
