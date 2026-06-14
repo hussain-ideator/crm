@@ -41,6 +41,10 @@ declaring a task complete.
 
 ## Frontend invariants
 
+- **Next.js 16 is newer than your training data.** APIs, conventions, and
+  file structure may differ from what you remember. Read the relevant guide
+  in `node_modules/next/dist/docs/` before writing App Router code, and heed
+  deprecation notices. Do not assume Next 13/14/15 behavior.
 - Server state: TanStack Query only. Query keys follow
   `[resource, params]` shape — e.g., `['leads', { status: 'open' }]`.
 - Mutations invalidate the relevant query keys on success.

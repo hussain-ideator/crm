@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# create-next-app agent rules — project standards live in /.agent-os/ (see ADR-008)
+/AGENTS.md
+/CLAUDE.md
