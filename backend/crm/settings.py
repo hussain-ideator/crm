@@ -69,7 +69,7 @@ LOCAL_APPS = [
     "apps.core",
     "apps.accounts",
     # Domain apps are added here as they are built, preserving dependency order:
-    # "apps.companies",
+    "apps.companies",
     # "apps.contacts",
     # "apps.leads",
     # "apps.deals",
