@@ -1,73 +1,78 @@
-# Frontend (Next.js 15 + shadcn/ui)
+# CRM Frontend
 
-## First-time setup
+Next.js 16 (App Router) + TypeScript, Tailwind CSS v4, shadcn/ui, TanStack
+Query, TanStack Table, react-hook-form + zod. See
+[`.agent-os/product/tech-stack.md`](../.agent-os/product/tech-stack.md) for the
+canonical stack and [`.agent-os/standards/code-style.md`](../.agent-os/standards/code-style.md)
+for conventions.
+
+## Prerequisites
+
+- **Node 20+** (Node 22.13+ recommended — some toolchain packages warn below it).
+- npm (the repo uses npm; no pnpm/yarn lockfile).
+
+## Setup
 
 ```bash
 cd frontend
-
-# 1. Initialize Next.js (only once)
-# Run from this directory; it will fill in the current folder.
-npx create-next-app@latest . \
-  --typescript \
-  --tailwind \
-  --app \
-  --eslint \
-  --src-dir \
-  --import-alias "@/*"
-
-# 2. Install shadcn/ui
-npx shadcn@latest init
-# pick: TypeScript, Tailwind, default style, slate base color,
-# CSS variables = yes, src directory = yes, app router = yes
-
-# 3. Add base components as you need them
-npx shadcn@latest add button input form table dialog dropdown-menu \
-  select toast card avatar badge
-
-# 4. Install runtime deps
-npm install @tanstack/react-query @tanstack/react-table zustand \
-  react-hook-form @hookform/resolvers zod lucide-react
-
-# 5. Env
-cp .env.example .env.local
-# edit NEXT_PUBLIC_API_URL
-
-# 6. Run
-npm run dev
+npm install
+cp .env.example .env.local      # then edit NEXT_PUBLIC_API_BASE_URL if needed
 ```
 
-## Conventions
+`.env.local` (and any `.env*.local`) is gitignored; `.env.example` is the
+committed template.
 
-- App Router only. No `pages/` directory.
-- Feature folders under `src/features/<resource>/` containing components,
-  hooks, queries, types, schema.
-- API client in `src/lib/api/` — thin fetch wrapper that injects the JWT
-  access token and handles 401 → refresh.
-- Server Components for list pages (faster initial paint). Client Components
-  for interactive forms and tables.
+## Scripts
 
-## Suggested folder layout (after create-next-app)
+| Command                | What it does                                                  |
+| ---------------------- | ------------------------------------------------------------- |
+| `npm run dev`          | Start the dev server (Turbopack) at http://localhost:3000     |
+| `npm run build`        | Production build                                              |
+| `npm start`            | Serve the production build                                    |
+| `npm run lint`         | ESLint (Next + typescript-eslint strict, Prettier-compatible) |
+| `npm run lint:fix`     | ESLint with `--fix`                                           |
+| `npm run format`       | Prettier write                                                |
+| `npm run format:check` | Prettier check (CI-safe)                                      |
+| `npm test`             | Vitest (unit/component, jsdom)                                |
+| `npm test -- --run`    | Vitest single run, non-watch                                  |
+| `npm run test:ui`      | Vitest UI                                                     |
+| `npm run test:e2e`     | Playwright e2e (boots `npm run dev` automatically)            |
+
+> Playwright browsers install on first use: `npx playwright install`.
+
+## Project structure
 
 ```
-frontend/src/
-├── app/                  # routes
-│   ├── (auth)/           # login, register, forgot-password
-│   ├── (dashboard)/      # protected app shell
-│   │   ├── leads/
-│   │   ├── contacts/
-│   │   ├── companies/
-│   │   ├── deals/
-│   │   └── activities/
-│   └── api/              # only for things that must run on the Next server
-├── components/
-│   └── ui/               # shadcn components
-├── features/
-│   ├── leads/
-│   ├── contacts/
-│   └── ...               # one folder per CRM module
+src/
+├── app/                # App Router routes (layout wrapped with QueryProvider)
+├── components/         # shared UI; shadcn primitives live in components/ui/
+├── features/           # colocate by feature: components, hooks, queries, schemas, types
 ├── lib/
-│   ├── api/              # fetch client, query keys, mutations
-│   ├── auth/             # JWT storage, refresh
-│   └── utils.ts
-└── styles/
+│   ├── api.ts          # the only place raw fetch lives
+│   ├── query-client.ts # QueryClient factory + browser singleton
+│   └── utils.ts        # cn() + shared helpers
+├── providers/          # QueryProvider (client) and future app providers
+└── types/              # cross-feature shared types
+tests/
+├── setup.ts            # Vitest + Testing Library setup
+└── e2e/                # Playwright specs (created as features land)
 ```
+
+Conventions: App Router only (no `pages/`). Colocate by feature, not by type.
+Files are `kebab-case.tsx`; components are `PascalCase` named exports; default
+exports only for Next pages/layouts. Server state via TanStack Query only —
+no `fetch` in components. Forms via react-hook-form + zod.
+
+## UI components (shadcn/ui)
+
+shadcn/ui is **copy-paste, owned in this repo** — components are committed
+source you can edit, not a versioned dependency. Config lives in
+`components.json` (style `new-york`, base color `neutral`, CSS variables).
+
+Add components on demand and commit them:
+
+```bash
+npx shadcn add button input form table dialog
+```
+
+They land in `src/components/ui/`.

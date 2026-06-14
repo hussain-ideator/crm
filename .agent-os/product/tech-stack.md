@@ -28,7 +28,7 @@ Pinned choices. Agents must NOT propose alternatives without an ADR in
 
 | Concern              | Choice                                    |
 |----------------------|-------------------------------------------|
-| Framework            | Next.js 15 (App Router)                   |
+| Framework            | Next.js 16 (App Router)                   |
 | Language             | TypeScript 5.x (strict mode)              |
 | UI components        | shadcn/ui (copy-paste, owned in repo)     |
 | Styling              | Tailwind CSS                              |
