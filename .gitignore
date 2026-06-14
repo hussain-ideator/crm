@@ -58,5 +58,11 @@ logs/
 .specify/state/
 .specify/cache/
 
+# Claude Code: ignore credential/local-state files, keep shared infra
+# (skills/, commands/, settings.json, README.md stay tracked). Per ADR-011.
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/*.local.json
+
 # Safety backup from Agent OS migration — delete once confident
 .agent-os.backup/
