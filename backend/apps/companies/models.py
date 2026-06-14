@@ -11,9 +11,7 @@ class Company(TimestampedModel, SoftDeleteMixin):
     phone = models.CharField(max_length=50, blank=True, default="")
     billing_address = models.TextField(blank=True, default="")
     shipping_address = models.TextField(blank=True, default="")
-    annual_revenue = models.DecimalField(
-        max_digits=15, decimal_places=2, null=True, blank=True
-    )
+    annual_revenue = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     employee_count = models.PositiveIntegerField(null=True, blank=True)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,

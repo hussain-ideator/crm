@@ -9,6 +9,7 @@ that is rolled back on teardown, so no data persists between tests.
 To run tests against a dedicated 'test_crm' database (recommended in CI),
 grant the DB user CREATE DATABASE privileges and remove the override below.
 """
+
 import pytest
 
 
