@@ -57,3 +57,6 @@ logs/
 # --- Agent / Spec tool caches ---
 .specify/state/
 .specify/cache/
+
+# Safety backup from Agent OS migration — delete once confident
+.agent-os.backup/
