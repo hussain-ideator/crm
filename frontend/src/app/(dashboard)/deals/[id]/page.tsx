@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 
 import { DeleteDealButton } from '@/features/deals/components/DeleteDealButton'
 import { useDeal } from '@/features/deals/hooks/useDeal'
+import { ActivityFeed } from '@/features/activities/components/ActivityFeed'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -116,6 +117,8 @@ function DealDetail({ id }: { id: number }) {
         <DetailRow label="Created" value={new Date(deal.created_at).toLocaleString()} />
         <DetailRow label="Updated" value={new Date(deal.updated_at).toLocaleString()} />
       </dl>
+
+      <ActivityFeed contentType="deal" objectId={deal.id} />
 
       <div>
         <Link

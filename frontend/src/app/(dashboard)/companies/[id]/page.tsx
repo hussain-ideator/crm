@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 
 import { useCompany } from '@/features/companies/hooks/useCompany'
 import { DeleteCompanyButton } from '@/features/companies/components/DeleteCompanyButton'
+import { ActivityFeed } from '@/features/activities/components/ActivityFeed'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -99,6 +100,8 @@ function CompanyDetail({ id }: { id: number }) {
         <DetailRow label="Created" value={new Date(company.created_at).toLocaleString()} />
         <DetailRow label="Updated" value={new Date(company.updated_at).toLocaleString()} />
       </dl>
+
+      <ActivityFeed contentType="company" objectId={company.id} />
 
       <div>
         <Link href="/companies" className="text-sm text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">

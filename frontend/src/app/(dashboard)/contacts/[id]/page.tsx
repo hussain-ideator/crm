@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 
 import { DeleteContactButton } from '@/features/contacts/components/DeleteContactButton'
 import { useContact } from '@/features/contacts/hooks/useContact'
+import { ActivityFeed } from '@/features/activities/components/ActivityFeed'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -102,6 +103,8 @@ function ContactDetail({ id }: { id: number }) {
         <DetailRow label="Created" value={new Date(contact.created_at).toLocaleString()} />
         <DetailRow label="Updated" value={new Date(contact.updated_at).toLocaleString()} />
       </dl>
+
+      <ActivityFeed contentType="contact" objectId={contact.id} />
 
       <div>
         <Link

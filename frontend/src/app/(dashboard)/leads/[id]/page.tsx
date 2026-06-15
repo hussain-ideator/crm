@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ConvertLeadButton } from '@/features/leads/components/ConvertLeadButton'
 import { DeleteLeadButton } from '@/features/leads/components/DeleteLeadButton'
 import { useLead } from '@/features/leads/hooks/useLead'
+import { ActivityFeed } from '@/features/activities/components/ActivityFeed'
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -144,6 +145,8 @@ function LeadDetail({ id }: { id: number }) {
         <DetailRow label="Created" value={new Date(lead.created_at).toLocaleString()} />
         <DetailRow label="Updated" value={new Date(lead.updated_at).toLocaleString()} />
       </dl>
+
+      <ActivityFeed contentType="lead" objectId={lead.id} />
 
       <div>
         <Link
