@@ -43,6 +43,7 @@ urlpatterns = [
     path("api/contacts/", include("apps.contacts.urls")),
     path("api/", include("apps.leads.urls")),
     path("api/", include("apps.deals.urls")),
+    path("api/", include("apps.activities.urls")),
 ]
 
 if settings.DEBUG:

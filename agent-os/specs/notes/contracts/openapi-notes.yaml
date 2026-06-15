@@ -1,0 +1,652 @@
+openapi: "3.1.0"
+info:
+  title: CRM Notes & Attachments API
+  version: "1.0.0"
+  description: |
+    Notes and Attachments — generic records attachable to any CRM entity
+    (Lead, Contact, Company, Deal) via Django ContentTypes.
+
+    Authentication: JWT Bearer token required on all endpoints.
+    Unauthenticated requests → 401.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserMinimal:
+      type: object
+      description: Minimal user representation embedded in Note and Attachment responses.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+      required: [id, email, first_name, last_name]
+
+    ContentTypeLabel:
+      type: string
+      enum: [lead, contact, company, deal]
+      description: Human-readable CRM entity label. Never exposes the raw ContentType integer ID.
+
+    # ─── Note ───────────────────────────────────────────────────────────────
+    NoteCreate:
+      type: object
+      description: Request body for creating a Note.
+      properties:
+        body:
+          type: string
+          minLength: 1
+          description: Note text. Whitespace-only values are rejected.
+        content_type:
+          $ref: '#/components/schemas/ContentTypeLabel'
+          nullable: true
+          description: CRM entity type the note is attached to. Must be provided together with object_id.
+        object_id:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: PK of the CRM record. Must be provided together with content_type.
+      required: [body]
+
+    NoteUpdate:
+      type: object
+      description: Request body for partially updating a Note (body only).
+      properties:
+        body:
+          type: string
+          minLength: 1
+          description: Updated note text.
+
+    NoteResponse:
+      type: object
+      description: Full Note representation returned by the API.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        body:
+          type: string
+        owner:
+          $ref: '#/components/schemas/UserMinimal'
+          nullable: true
+          readOnly: true
+          description: User who created the note. Null if the owner has been deleted.
+        content_type:
+          $ref: '#/components/schemas/ContentTypeLabel'
+          nullable: true
+          readOnly: true
+        object_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required: [id, body, created_at, updated_at]
+
+    NoteListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Total number of non-deleted notes matching the current filter.
+        next:
+          type: string
+          format: uri
+          nullable: true
+          description: URL for the next page of results.
+        previous:
+          type: string
+          format: uri
+          nullable: true
+          description: URL for the previous page of results.
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoteResponse'
+      required: [count, results]
+
+    # ─── Attachment ──────────────────────────────────────────────────────────
+    AttachmentResponse:
+      type: object
+      description: Attachment metadata returned by the API. File content is served separately.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        filename:
+          type: string
+          readOnly: true
+          description: Original (sanitised) filename derived at upload time.
+        file_size:
+          type: integer
+          readOnly: true
+          description: File size in bytes, derived at upload time.
+        mime_type:
+          type: string
+          readOnly: true
+          description: MIME type detected server-side via magic byte inspection.
+        file_url:
+          type: string
+          format: uri
+          readOnly: true
+          description: URL to download the file content.
+        owner:
+          $ref: '#/components/schemas/UserMinimal'
+          nullable: true
+          readOnly: true
+          description: User who uploaded the attachment. Null if the owner has been deleted.
+        content_type:
+          $ref: '#/components/schemas/ContentTypeLabel'
+          nullable: true
+          readOnly: true
+        object_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required: [id, filename, file_size, mime_type, file_url, created_at, updated_at]
+
+    AttachmentListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+      required: [count, results]
+
+    # ─── Errors ──────────────────────────────────────────────────────────────
+    ValidationError:
+      type: object
+      description: Field-level or non-field-level validation errors.
+      additionalProperties:
+        oneOf:
+          - type: array
+            items:
+              type: string
+          - type: string
+
+    NotFoundError:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Not found."
+
+    UnauthorizedError:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Authentication credentials were not provided."
+
+paths:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Notes
+  # ═══════════════════════════════════════════════════════════════════════════
+  /api/notes/:
+    get:
+      summary: List notes
+      description: |
+        Returns a paginated list of all non-deleted notes.
+        Optionally filtered by the attached CRM record using
+        `content_type` + `object_id` (both required together when filtering by record).
+        Sorted by `created_at` descending.
+      tags: [Notes]
+      parameters:
+        - name: content_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentTypeLabel'
+          description: CRM entity label. Must be paired with object_id.
+          required: false
+        - name: object_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          description: CRM entity PK. Must be paired with content_type.
+          required: false
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          description: Page number (1-based).
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          description: Results per page (max 100).
+      responses:
+        '200':
+          description: Paginated list of notes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteListResponse'
+              examples:
+                with_notes:
+                  summary: List with notes
+                  value:
+                    count: 2
+                    next: null
+                    previous: null
+                    results:
+                      - id: 12
+                        body: "Second follow-up call completed."
+                        owner: {id: 3, email: "alice@example.com", first_name: "Alice", last_name: "Smith"}
+                        content_type: "lead"
+                        object_id: 5
+                        created_at: "2026-06-15T10:30:00Z"
+                        updated_at: "2026-06-15T10:30:00Z"
+                      - id: 11
+                        body: "Initial contact made."
+                        owner: {id: 3, email: "alice@example.com", first_name: "Alice", last_name: "Smith"}
+                        content_type: "lead"
+                        object_id: 5
+                        created_at: "2026-06-14T09:00:00Z"
+                        updated_at: "2026-06-14T09:00:00Z"
+        '400':
+          description: content_type or object_id validation error (e.g., one provided without the other, or invalid label).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+
+    post:
+      summary: Create a note
+      description: |
+        Creates a new note. `owner` is automatically set from the authenticated user.
+        `content_type` and `object_id` must be provided together or both omitted.
+      tags: [Notes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteCreate'
+            examples:
+              with_linked_record:
+                summary: Note attached to a Lead
+                value:
+                  body: "Prospect is interested in the enterprise plan."
+                  content_type: "lead"
+                  object_id: 5
+              standalone:
+                summary: Note with no linked record
+                value:
+                  body: "General reminder for Q3 review."
+      responses:
+        '201':
+          description: Note created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '400':
+          description: Validation error (e.g., blank body, mismatched content_type/object_id pair).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                blank_body:
+                  value:
+                    body: ["This field may not be blank."]
+                pair_error:
+                  value:
+                    non_field_errors: ["content_type and object_id must both be provided or both be null."]
+                invalid_label:
+                  value:
+                    content_type: ["Invalid label: 'invoice'. Allowed: ['company', 'contact', 'deal', 'lead']"]
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+
+  /api/notes/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    get:
+      summary: Retrieve a note
+      tags: [Notes]
+      responses:
+        '200':
+          description: Note detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: Note not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+    patch:
+      summary: Partially update a note
+      description: Only `body` is editable. All other fields are read-only.
+      tags: [Notes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteUpdate'
+            examples:
+              update_body:
+                value:
+                  body: "Updated: prospect confirmed enterprise interest."
+      responses:
+        '200':
+          description: Note updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoteResponse'
+        '400':
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: Note not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+    delete:
+      summary: Soft-delete a note
+      description: Sets `is_deleted=True`. The database row is preserved.
+      tags: [Notes]
+      responses:
+        '204':
+          description: Note soft-deleted. No response body.
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: Note not found or already soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Attachments
+  # ═══════════════════════════════════════════════════════════════════════════
+  /api/attachments/:
+    get:
+      summary: List attachments
+      description: |
+        Returns a paginated list of all non-deleted attachment metadata records.
+        Optionally filtered by the attached CRM record via
+        `content_type` + `object_id` (both required together).
+        Sorted by `created_at` descending.
+        Does NOT serve file content — use the `file_url` in each result to download.
+      tags: [Attachments]
+      parameters:
+        - name: content_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentTypeLabel'
+          required: false
+        - name: object_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          required: false
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated list of attachment metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentListResponse'
+        '400':
+          description: Invalid filter parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+
+    post:
+      summary: Upload an attachment
+      description: |
+        Uploads a file and creates an Attachment record.
+        Request must be `multipart/form-data`.
+
+        Server-derived fields (NOT supplied by the client):
+        - `filename` — from the uploaded file's name (sanitised)
+        - `file_size` — in bytes
+        - `mime_type` — detected via magic byte inspection (python-magic)
+
+        Constraints:
+        - Maximum file size: 10 MB
+        - Allowed MIME types: PDF, JPEG, PNG, GIF, WEBP, Word, Excel, PowerPoint
+        - `content_type` and `object_id` must be provided together or both omitted
+
+        There is NO edit endpoint — attachments are immutable after upload.
+      tags: [Attachments]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to upload (max 10 MB; allowed MIME types only).
+                content_type:
+                  $ref: '#/components/schemas/ContentTypeLabel'
+                  description: CRM entity label. Must be paired with object_id.
+                object_id:
+                  type: integer
+                  minimum: 1
+                  description: CRM entity PK. Must be paired with content_type.
+              required: [file]
+      responses:
+        '201':
+          description: Attachment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+              examples:
+                pdf_on_deal:
+                  summary: PDF uploaded to a Deal
+                  value:
+                    id: 7
+                    filename: "proposal_q3.pdf"
+                    file_size: 204800
+                    mime_type: "application/pdf"
+                    file_url: "http://localhost:8000/media/attachments/2026/06/proposal_q3.pdf"
+                    owner: {id: 3, email: "alice@example.com", first_name: "Alice", last_name: "Smith"}
+                    content_type: "deal"
+                    object_id: 42
+                    created_at: "2026-06-15T11:00:00Z"
+                    updated_at: "2026-06-15T11:00:00Z"
+        '400':
+          description: Validation error (file too large, disallowed MIME type, missing file, pair mismatch).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                file_too_large:
+                  value:
+                    file: ["File exceeds the 10 MB limit."]
+                disallowed_mime:
+                  value:
+                    file: ["File type 'application/x-msdownload' is not allowed. Allowed types: [...]"]
+                pair_error:
+                  value:
+                    non_field_errors: ["content_type and object_id must both be provided or both be null."]
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+
+  /api/attachments/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    get:
+      summary: Retrieve attachment metadata
+      description: Returns metadata only. Use `file_url` in the response to download the file content.
+      tags: [Attachments]
+      responses:
+        '200':
+          description: Attachment metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: Attachment not found or soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+    delete:
+      summary: Soft-delete an attachment
+      description: |
+        Sets `is_deleted=True` on the Attachment record.
+        The physical file on disk is NOT removed (deferred cleanup).
+        The database row is preserved.
+      tags: [Attachments]
+      responses:
+        '204':
+          description: Attachment soft-deleted. No response body.
+        '401':
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: Attachment not found or already soft-deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+tags:
+  - name: Notes
+    description: |
+      Free-text notes attachable to any CRM record (Lead, Contact, Company, Deal).
+      Full CRUD with soft delete.
+  - name: Attachments
+    description: |
+      File attachments for any CRM record. Upload-only (immutable after upload).
+      Retrieve metadata and download via file_url. Soft delete only — file stays on disk.
