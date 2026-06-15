@@ -4,7 +4,23 @@ export const companySchema = z.object({
   name: z.string().min(1, 'Company name is required'),
   industry: z.string().default(''),
   website: z
-    .union([z.string().url('Enter a valid URL'), z.literal('')])
+    .union([
+      z
+        .string()
+        .url('Enter a valid URL')
+        .refine(
+          (url) => {
+            try {
+              const { hostname } = new URL(url)
+              return hostname === 'localhost' || hostname.includes('.')
+            } catch {
+              return false
+            }
+          },
+          'Enter a valid URL with a domain (e.g., https://company.com)',
+        ),
+      z.literal(''),
+    ])
     .default(''),
   phone: z.string().default(''),
   billing_address: z.string().default(''),
